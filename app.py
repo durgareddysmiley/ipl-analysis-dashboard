@@ -3,7 +3,6 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
-
 # --- 1. Initialize State ---
 if "page" not in st.session_state:
     st.session_state.page = "analytics"
@@ -14,13 +13,29 @@ st.set_page_config(page_title="IPL Data Dashboard", layout="wide")
 st.title("IPL Cricket Analysis Dashboard")
 st.markdown("Explore batting & bowling matchups, phase analysis, and strategic insights using a unified IPL dataset.")
 
+from data_fetcher import fetch_live_data
+
 # --- Data Loading ---
-@st.cache_data
-def load_data():
-    return pd.read_csv("cleaned_ipl_data.csv")
+def load_data(force_refresh=False):
+    # Load historical data
+    df_h = pd.read_csv("cleaned_ipl_data.csv")
+    
+    # Fetch live data (IPL 2026)
+    # If force_refresh is True, we tell Streamlit to re-run the inner fetch
+    if force_refresh:
+        st.cache_data.clear()
+        
+    df_l = fetch_live_data()
+    
+    if not df_l.empty:
+        # Merge datasets
+        df_merged = pd.concat([df_h, df_l], ignore_index=True)
+        return df_merged
+        
+    return df_h
 
 # Load data
-with st.spinner("Loading Consolidated IPL Data..."):
+with st.spinner("Syncing Latest IPL 2026 Data..."):
     df = load_data()
 
 # Ensure ball_num exists
@@ -36,6 +51,12 @@ if df.empty:
     st.stop()
 
 # --- Sidebar Controls ---
+st.sidebar.markdown("### **Data Sync**")
+if st.sidebar.button("🔄 Refresh Latest Matches"):
+    st.cache_data.clear()
+    st.rerun()
+
+st.sidebar.markdown("---")
 st.sidebar.markdown("### **Analytics Filters**")
 
 # Responsive Function
